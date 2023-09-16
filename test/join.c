@@ -1,48 +1,46 @@
 #include "../header/cider.h"
+#include "../lib/log.c/src/log.h"
 #include <stdio.h>
 
 static void func1(size_t argc, void* _argv) {
-    printf("func1: started\n");
+    log_debug("func1: started");
     async_sleep(5);
-    printf("func1: returning\n");
+    log_debug("func1: returning");
 }
 
 static void func2(size_t argc, void* _argv) {
-    printf("func2: started\n");
+    log_debug("func2: started");
     async_sleep(3);
-    printf("func2: returning\n");
+    log_debug("func2: returning");
 }
 
 static void func3(size_t argc, void* _argv) {
-    printf("func3: started\n");
+    log_debug("func3: started");
     async_sleep(1);
-    printf("func3: returning\n");
+    log_debug("func3: returning");
 }
 
 static void func4(size_t argc, void* _argv) {
-    printf("func4: started\n");
+    log_debug("func4: started");
 
     Cider* const f = async(func3, 0, NULL);
     await(f);
 
-    printf("func4: returning\n");
+    log_debug("func4: returning");
 }
 
 int main(int argc, char* argv[]) {
-    printf("=== BEGIN ===\n");
+    log_debug("BEGIN");
 
     cider_init();
-    printf("cider_init DONE\n");
 
     Cider* const f1 = async(func1, 0, NULL);
     Cider* const f2 = async(func2, 0, NULL);
 
     Cider* const fs[] = {f1, f2};
-    printf("before cider_join\n");
     join_ciders(fs, 2);
-    printf("after cider_join\n");
 
-    printf("=== END ===\n");
+    log_debug("END");
 
     return 0;
 }

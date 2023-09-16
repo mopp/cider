@@ -1,10 +1,11 @@
 #include "../header/cider.h"
+#include "../lib/log.c/src/log.h"
 #include <stdio.h>
 
 static void func1(size_t _argc, void* _argv) {
-    printf("func: started\n");
+    log_debug("func: started");
     async_sleep(1);
-    printf("func: returning\n");
+    log_debug("func: returning");
 }
 
 static int test_assert_without_args() {
@@ -15,7 +16,7 @@ static int test_assert_without_args() {
 }
 
 static void func2(size_t argc, void* argv) {
-    printf("func: started\n");
+    log_debug("func: started\n");
 
     // assert(argc == 1);
     // assert(agrv[0] == 1);
@@ -23,7 +24,7 @@ static void func2(size_t argc, void* argv) {
     // assert(agrv[2] == 3);
 
     async_sleep(1);
-    printf("func: returning\n");
+    log_debug("func: returning\n");
 }
 
 static int test_assert_with_args() {
@@ -35,14 +36,14 @@ static int test_assert_with_args() {
 }
 
 int main(void) {
-    printf("=== BEGIN ===\n");
+    log_debug("BEGIN");
 
     cider_init();
 
     test_assert_with_args();
     test_assert_without_args();
 
-    printf("=== END ===\n");
+    log_debug("END");
 
     return 0;
 }

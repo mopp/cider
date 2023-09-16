@@ -1,4 +1,5 @@
 #include "../header/cider.h"
+#include "../lib/log.c/src/log.h"
 
 #include <string.h>
 #define _XOPEN_SOURCE
@@ -115,7 +116,7 @@ void await(Cider* const next) {
                 should_wait = false;
                 break;
             default:
-                fprintf(stderr, "Unexpected state in await.");
+                log_error("Unexpected state in await.");
                 exit(EXIT_FAILURE);
         }
     } while (should_wait);
@@ -137,7 +138,7 @@ void async_sleep(time_t seconds) {
     time_t begin = ts.tv_sec;
     time_t now = begin;
 
-    printf("async_sleep(%zd)\n", seconds);
+    log_debug("async_sleep(%zd)", seconds);
     while ((now - begin) <= seconds) {
         // sleep 中は暇なので他の Cider を実行する
         current_cider->state = BLOCKED;
@@ -172,8 +173,6 @@ void join_ciders(Cider* const* const ciders, size_t count) {
 // current から next に実行を切り替える
 // TODO: 引数で state の設定漏れをなくす
 static void switch_cider(Cider* const current, Cider* const next) {
-    printf("cider_switch\n");
-
     // next の実行完了後にここに戻ってくるために設定する
     next->context.uc_link = &current->context;
 
@@ -183,7 +182,7 @@ static void switch_cider(Cider* const current, Cider* const next) {
     current_cider = next;
     int err = swapcontext(&current->context, &next->context);
     if (err != 0) {
-        fprintf(stderr, "Failed to swapcontext. err = %d", err);
+        log_error("Failed to swapcontext. err = %d", err);
         exit(EXIT_FAILURE);
     }
     current_cider = current;
@@ -192,16 +191,12 @@ static void switch_cider(Cider* const current, Cider* const next) {
 }
 
 static void ciderize(int i) {
-    printf("ciderize: BEGIN i = %d\n", i);
-
     Cider* const cider = &ciders[i];
     ciderizeArg const* const arg = cider->arg;
 
     cider->state = RUNNING;
     arg->func(arg->argc, arg->argv);
     cider->state = DONE;
-
-    printf("ciderize: END\n");
 }
 
 // READY か BLOCKED な Cider に実行を切り替える
