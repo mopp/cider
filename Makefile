@@ -1,14 +1,18 @@
+test_files := $(shell ls test/*.c)
+test_bins := $(basename $(test_files))
+
 .PHONY: test
-test: test/await test/join
-	./test/await
-	./test/join
+test: $(test_bins)
+	$(foreach t, $(test_bins), $(t)${newline})
 
-test/await: src/cider.c test/await.c
-	$(CC) $^ -o $@
-
-test/join: src/cider.c test/join.c
-	$(CC) $^ -o $@
+$(test_bins): %: %.c src/cider.c header/cider.h
 
 .PHONY: clean
 clean:
-	$(RM) test/await
+	$(RM) $(test_bins)
+
+# foreach で改行するためのマクロ
+define newline
+
+
+endef
