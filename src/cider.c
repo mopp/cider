@@ -121,8 +121,6 @@ void await(Cider* const next) {
         }
     } while (should_wait);
 
-    current_cider->state = RUNNING;
-
     // 完了した Cider を破棄する.
     next->state = UNUSED;
     memset(&next->context, 0, sizeof(Context));
