@@ -1,3 +1,4 @@
+CC := clang
 CFLAGS := -DLOG_USE_COLOR
 
 test_files := $(shell ls test/*.c)
@@ -7,7 +8,7 @@ test_bins := $(basename $(test_files))
 test: $(test_bins)
 	$(foreach t, $(test_bins), $(t)${newline})
 
-$(test_bins): %: %.c lib/log.c/src/log.* src/cider.c header/cider.h
+$(test_bins): %: %.c lib/log.c/src/log.c src/cider.c
 
 .PHONY: clean
 clean:
