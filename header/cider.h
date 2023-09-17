@@ -2,7 +2,7 @@
 
 #define _CIDER
 
-#include <stdlib.h>
+#include <stddef.h>
 
 typedef struct cider Cider;
 // typedef void (*AsyncFuncion)(size_t argc, void* argv[]); に直す
