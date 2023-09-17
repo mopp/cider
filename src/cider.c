@@ -52,7 +52,7 @@ static size_t to_index(Cider const* const);
 static char* to_state_str(State);
 static void log_cider(char const*, Cider const* const);
 
-int cider_init() {
+int cider_init(void) {
     ciders = malloc(sizeof(Cider) * MAX_COUNT);
     for (Cider* f = &ciders[0]; f != &ciders[MAX_COUNT]; f++) {
         f->state = UNUSED;
