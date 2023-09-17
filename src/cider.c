@@ -49,7 +49,8 @@ static void ciderize(void);
 static void switch_cider(State, Cider* const);
 static Cider* find_cider(State);
 static size_t to_index(Cider const* const);
-static char* to_state_str(Cider const* const);
+static char* to_state_str(State);
+static void log_cider(char const*, Cider const* const);
 
 int cider_init() {
     ciders = malloc(sizeof(Cider) * MAX_COUNT);
@@ -69,17 +70,18 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
 
     log_debug("allocate cider: %zd", to_index(cider));
 
-    Context* c = &cider->context;
-    if (getcontext(c) == -1) {
+    Context* context = &cider->context;
+    if (getcontext(context) == -1) {
         log_error("No more cider.");
         return NULL;
     }
 
     // TODO: Config uc_sigmask.
     void* ptr = malloc(STACK_SIZE + sizeof(ciderizeArg));
-    c->uc_stack.ss_sp = ptr + sizeof(ciderizeArg);
-    c->uc_stack.ss_size = STACK_SIZE;
-    c->uc_link = NULL;
+    context->uc_stack.ss_sp = ptr + sizeof(ciderizeArg);
+    context->uc_stack.ss_size = STACK_SIZE;
+    context->uc_link = &current_cider->context;
+    makecontext(context, ciderize, 0);
 
     cider->arg = ptr;
     ciderizeArg* const arg = cider->arg;
@@ -94,19 +96,21 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
 
 // next が完了するまで待つ
 void await(Cider* const next) {
+    assert(current_cider != next);
     assert(current_cider->state == RUNNING);
-    assert(next->state == USED);
+    assert(next->state == USED || next->state == READY);
 
     next->state = READY;
+    switch_cider(WAITED, next);
 
     bool should_wait = true;
     do {
-        switch_cider(WAITED, next);
-
+        // log_warn("next->state = %s", to_state_str(next->state));
         switch (next->state) {
             case POLLING:
             case WAITED: {
-                // next が何らかの理由で停止しているので、その間は別の Cider を実行する
+                // next が何らかの理由で停止している.
+                // その間は別の Cider を実行する
                 Cider* t = find_cider(RUNNABLE);
                 if (t != NULL) {
                     switch_cider(WAITED, t);
@@ -123,6 +127,8 @@ void await(Cider* const next) {
                 exit(EXIT_FAILURE);
         }
     } while (should_wait);
+
+    assert(next->state == UNUSED);
 }
 
 // 指定されたミリ秒待つ
@@ -154,14 +160,19 @@ void join_ciders(Cider* const* const ciders, size_t count) {
     log_debug("join_ciders(count = %zd)", count);
 
     assert(current_cider->state == RUNNING);
+
     for (size_t i = 0; i < count; i++) {
         assert(ciders[i]->state == USED);
+
+        // 全て READY にして concurrent に実行可能にする
+        ciders[i]->state = READY;
     }
 
     while (1) {
-        // TODO: improve performance.
         for (size_t i = 0; i < count; i++) {
-            await(ciders[i]);
+            if (ciders[i]->state & RUNNABLE) {
+                await(ciders[i]);
+            }
         }
 
         for (size_t i = 0; i < count; i++) {
@@ -182,14 +193,12 @@ static void switch_cider(State prev_state, Cider* const next) {
     assert(current_cider->state == RUNNING);
     assert(next->state == READY || next->state == POLLING);
 
-    log_debug("switch from %zd to %zd", to_index(current_cider), to_index(next));
-
     Cider* prev = current_cider;
     prev->state = prev_state;
 
+    Context* next_context = next->context.uc_link;
     next->state = RUNNING;
     next->context.uc_link = &prev->context; // next の実行完了後にここに戻ってくるために設定する
-    makecontext(&next->context, ciderize, 0);
 
     current_cider = next;
     int err = swapcontext(&prev->context, &next->context);
@@ -198,7 +207,9 @@ static void switch_cider(State prev_state, Cider* const next) {
         exit(EXIT_FAILURE);
     }
     current_cider = prev;
+
     current_cider->state = RUNNING;
+    next->context.uc_link = next_context;
 
     // 実行完了していたら Cider を破棄
     if (next->state == UNUSED) {
@@ -238,8 +249,8 @@ static size_t to_index(Cider const* const cider) {
     return ((uintptr_t)cider - (uintptr_t)&ciders[0]) / sizeof(Cider);
 }
 
-static char* to_state_str(Cider const* const cider) {
-    switch (cider->state) {
+static char* to_state_str(State s) {
+    switch (s) {
         case UNUSED:
             return "UNUSED";
         case USED:
@@ -256,4 +267,8 @@ static char* to_state_str(Cider const* const cider) {
             log_error("unexpected state.");
             exit(EXIT_FAILURE);
     }
+}
+
+static void log_cider(char const* msg, Cider const* const cider) {
+    log_debug("%s index = %zd, state = %s", msg, to_index(cider), to_state_str(cider->state));
 }
