@@ -3,6 +3,7 @@
 #include "../header/cider.h"
 #include "../lib/log.c/src/log.h"
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -61,7 +62,7 @@ int cider_init(void) {
     return 0;
 }
 
-// 与えられた func を実行する Cider を生成する
+// 与えられた AsyncFuncion を実行する Cider を生成する
 Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     Cider* const cider = find_cider(UNUSED);
     if (cider == NULL) {
@@ -81,7 +82,7 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     void* ptr = malloc(STACK_SIZE + sizeof(CiderizeArg));
     context->uc_stack.ss_sp = ptr + sizeof(CiderizeArg);
     context->uc_stack.ss_size = STACK_SIZE;
-    context->uc_link = &current_cider->context;
+    context->uc_link = &current_cider->context; // async を呼び出した Cider に戻るために保存する
     makecontext(context, ciderize, 0);
 
     cider->arg = ptr;
@@ -95,7 +96,8 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     return cider;
 }
 
-// next が完了するまで待つ
+// next が実行完了するまで待つ
+// next が RUNNABLE ではないとき、他の Cider を実行する
 void await(Cider* const next) {
     assert(current_cider != next);
     assert(current_cider->state == RUNNING);
@@ -106,7 +108,6 @@ void await(Cider* const next) {
 
     bool should_wait = true;
     do {
-        // log_warn("next->state = %s", to_state_str(next->state));
         switch (next->state) {
             case POLLING:
             case WAITED: {
@@ -136,7 +137,7 @@ void await(Cider* const next) {
 }
 
 // 指定されたミリ秒待つ
-// 待っているときに runnable な Fiber があれば実行する
+// 待っているときに RUNNABLE な Cider があれば実行する
 void await_sleep(long msec) {
     log_debug("await_sleep(%ld)", msec);
     assert(current_cider->state == RUNNING);
@@ -160,6 +161,7 @@ void await_sleep(long msec) {
     }
 }
 
+// 指定された N 個の Cider を concurrent に実行し、全て完了するのを待つ
 void join_ciders(Cider* const* const ciders, size_t count) {
     log_debug("join_ciders(count = %zd)", count);
 
@@ -222,6 +224,7 @@ static void switch_cider(State prev_state, Cider* const next) {
     }
 }
 
+// Context の実行開始直後と終了直前に処理を挟むためのラッパー
 static void ciderize(void) {
     assert(current_cider->state == RUNNING);
 
