@@ -62,10 +62,11 @@ int cider_init() {
 // 与えられた func を実行する Cider を生成する
 Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     Cider* const cider = find_cider(UNUSED);
-    log_debug("allocate cider: %zd", to_index(cider));
     if (cider == NULL) {
         return NULL;
     }
+
+    log_debug("allocate cider: %zd", to_index(cider));
 
     Context* c = &cider->context;
     if (getcontext(c) == -1) {
