@@ -27,7 +27,6 @@ struct ciderize_arg {
 typedef struct ciderize_arg ciderizeArg;
 
 typedef ucontext_t Context;
-typedef void (*ContextFunc)(void);
 
 struct cider {
     State state;
@@ -45,7 +44,7 @@ static Cider root_cider = {
 };
 static Cider* current_cider = &root_cider;
 
-static void ciderize(int);
+static void ciderize(void);
 static void switch_cider(State, Cider* const);
 static Cider* find_cider(State);
 static Cider* find_runnable_cider();
@@ -186,7 +185,7 @@ static void switch_cider(State prev_state, Cider* const next) {
 
     next->state = RUNNING;
     next->context.uc_link = &prev->context; // next の実行完了後にここに戻ってくるために設定する
-    makecontext(&next->context, (ContextFunc)ciderize, 1, to_index(next));
+    makecontext(&next->context, ciderize, 0);
 
     current_cider = next;
     int err = swapcontext(&prev->context, &next->context);
@@ -204,9 +203,10 @@ static void switch_cider(State prev_state, Cider* const next) {
     }
 }
 
-// TODO: current_cider 経由で取得すれば引数不要かも
-static void ciderize(int i) {
-    Cider* const cider = &ciders[i];
+static void ciderize(void) {
+    assert(current_cider->state == RUNNING);
+
+    Cider* const cider = current_cider;
     ciderizeArg const* const arg = cider->arg;
 
     arg->func(arg->argc, arg->argv);
