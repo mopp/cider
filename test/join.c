@@ -23,7 +23,7 @@ static void func2(size_t argc, void* _argv) {
 }
 
 int main(int argc, char* argv[]) {
-    log_debug("BEGIN");
+    log_info("Begin.");
 
     cider_init();
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     };
     join_ciders(fs, 2);
 
-    log_debug("END");
+    log_info("Succeeded.");
 
     return 0;
 }

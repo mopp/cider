@@ -16,7 +16,7 @@ static void func(size_t argc, void* argv) {
 }
 
 int main(void) {
-    log_debug("BEGIN");
+    log_info("Begin.");
 
     cider_init();
 
@@ -32,7 +32,7 @@ int main(void) {
     assert(test_storage[1] == 101);
     assert(test_storage[2] == 102);
 
-    log_debug("END");
+    log_info("Succeeded.");
 
     return 0;
 }
