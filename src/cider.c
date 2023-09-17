@@ -194,6 +194,9 @@ void join_ciders(Cider* const* const ciders, size_t count) {
     }
 
     assert(current_cider->state == RUNNING);
+    for (size_t i = 0; i < count; i++) {
+        assert(ciders[i]->state == FREE);
+    }
 }
 
 // current_cider から next に実行を切り替える
