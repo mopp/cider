@@ -5,7 +5,7 @@
 
 static int test_storage[3] = {0};
 
-static void func(size_t argc, void* argv) {
+static void func(size_t argc, void* argv[]) {
     log_debug("func: started. number");
 
     async_sleep(50);

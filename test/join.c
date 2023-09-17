@@ -4,7 +4,7 @@
 
 static int test_codes[10] = {0};
 
-static void func1(size_t argc, void* _argv) {
+static void func1(size_t argc, void* _argv[]) {
     log_debug("func1: started");
     async_sleep(1);
 
@@ -13,7 +13,7 @@ static void func1(size_t argc, void* _argv) {
     log_debug("func1: returning");
 }
 
-static void func2(size_t argc, void* _argv) {
+static void func2(size_t argc, void* _argv[]) {
     log_debug("func2: started");
     async_sleep(2);
 

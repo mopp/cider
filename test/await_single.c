@@ -5,10 +5,10 @@
 
 static int test_storage[1] = {0};
 
-static void func(size_t argc, void* argv) {
+static void func(size_t argc, void* argv[]) {
     log_debug("func: started");
 
-    size_t* arr = argv;
+    size_t* arr = argv[0];
     assert(argc == 1);
     assert(arr[0] == 1);
     assert(arr[1] == 2);
@@ -26,7 +26,8 @@ int main(void) {
     cider_init();
 
     size_t arr[] = {1, 2, 3};
-    Cider* const f = async(func, 1, arr);
+    void* argv[] = {arr};
+    Cider* const f = async(func, 1, argv);
     await(f);
 
     assert(test_storage[0] == 100);
