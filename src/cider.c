@@ -11,31 +11,13 @@
 #include <time.h>
 #include <ucontext.h>
 
-// TODO: bitmask にして複数検索できるようにする？
-enum state {
-    // 未使用の Cider
-    // async することで利用可能
-    UNUSED,
-
-    // 確保済みの Cider
-    // await, join をすると READY になる
-    USED,
-
-    // 実行可能状態の Cider
-    // switch すると RUNNING になる
-    READY,
-
-    // 実行中の Cider
-    // 一つの Thread で常に唯一つになる
-    RUNNING,
-
-    // sleep や通信などの副作用の完了を Polling しながら待っている状態
-    POLLING,
-
-    // 他の Cider の実行完了を待っている状態
-    WAITED,
-};
-typedef enum state State;
+typedef uint8_t State;
+#define UNUSED (1 << 0)  // async することで USED になる
+#define USED (1 << 1)    // await や join をすると READY になる
+#define READY (1 << 2)   // switch すると RUNNING になる
+#define RUNNING (1 << 3) // 一つの Thread で常にただ一つの Cider しかこの状態になれない
+#define POLLING (1 << 4) // sleep や通信などの副作用の完了を Polling しながら待っている
+#define WAITED (1 << 5)  // 他の Cider の実行完了を待っている
 
 struct ciderize_arg {
     AsyncFuncion func;
@@ -65,13 +47,12 @@ static Cider* current_cider = &root_cider;
 
 static void ciderize(int);
 static void switch_cider(State, Cider* const);
+static Cider* find_cider(State);
 static Cider* find_runnable_cider();
-static size_t find_cider_index(State);
 static size_t to_index(Cider const* const);
 
 int cider_init() {
     ciders = malloc(sizeof(Cider) * MAX_COUNT);
-    // TODO: マクロ化
     for (Cider* f = &ciders[0]; f != &ciders[MAX_COUNT]; f++) {
         f->state = UNUSED;
     }
@@ -81,13 +62,11 @@ int cider_init() {
 
 // 与えられた func を実行する Cider を生成する
 Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
-    size_t i = find_cider_index(UNUSED);
-    log_debug("allocate cider: %zd", i);
-    if (i == MAX_COUNT) {
+    Cider* const cider = find_cider(UNUSED);
+    log_debug("allocate cider: %zd", to_index(cider));
+    if (cider == NULL) {
         return NULL;
     }
-
-    Cider* cider = &ciders[i];
 
     Context* c = &cider->context;
     if (getcontext(c) == -1) {
@@ -237,11 +216,9 @@ static void ciderize(int i) {
     // NOTE: ここでメモリを破棄するともとの Context に復帰できなくなる
 }
 
-// READY か POLLING な Cider を取得する
-static Cider* find_runnable_cider() {
+static Cider* find_cider(State s) {
     for (Cider* next = &ciders[0]; next != &ciders[MAX_COUNT]; ++next) {
-        if (current_cider != next && (next->state == READY || next->state == POLLING)) {
-            log_debug("current_cider = %zd, next = %zd", to_index(current_cider), to_index(next));
+        if (current_cider != next && ((next->state & s) != 0)) {
             return next;
         }
     }
@@ -249,15 +226,8 @@ static Cider* find_runnable_cider() {
     return NULL;
 }
 
-static size_t find_cider_index(State s) {
-    // TODO: next fit にする?
-    for (size_t i = 0; i < MAX_COUNT; i++) {
-        if (ciders[i].state == s) {
-            return i;
-        }
-    }
-
-    return MAX_COUNT;
+static Cider* find_runnable_cider() {
+    return find_cider(READY | POLLING);
 }
 
 static size_t to_index(Cider const* const cider) {
