@@ -25,14 +25,14 @@ struct ciderize_arg {
     size_t argc;
     void* argv;
 };
-typedef struct ciderize_arg ciderizeArg;
+typedef struct ciderize_arg CiderizeArg;
 
 typedef ucontext_t Context;
 
 struct cider {
     State state;
     Context context;
-    ciderizeArg* arg;
+    CiderizeArg* arg;
 };
 
 static size_t const STACK_SIZE = 8 * 1024; // 8KiB
@@ -77,14 +77,14 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     }
 
     // TODO: Config uc_sigmask.
-    void* ptr = malloc(STACK_SIZE + sizeof(ciderizeArg));
-    context->uc_stack.ss_sp = ptr + sizeof(ciderizeArg);
+    void* ptr = malloc(STACK_SIZE + sizeof(CiderizeArg));
+    context->uc_stack.ss_sp = ptr + sizeof(CiderizeArg);
     context->uc_stack.ss_size = STACK_SIZE;
     context->uc_link = &current_cider->context;
     makecontext(context, ciderize, 0);
 
     cider->arg = ptr;
-    ciderizeArg* const arg = cider->arg;
+    CiderizeArg* const arg = cider->arg;
     arg->func = func;
     arg->argc = argc;
     arg->argv = argv;
@@ -222,7 +222,7 @@ static void ciderize(void) {
     assert(current_cider->state == RUNNING);
 
     Cider* const cider = current_cider;
-    ciderizeArg const* const arg = cider->arg;
+    CiderizeArg const* const arg = cider->arg;
 
     arg->func(arg->argc, arg->argv);
 
