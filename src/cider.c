@@ -65,6 +65,7 @@ int cider_init(void) {
 Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     Cider* const cider = find_cider(UNUSED);
     if (cider == NULL) {
+        log_error("No more cider.");
         return NULL;
     }
 
@@ -72,7 +73,7 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
 
     Context* context = &cider->context;
     if (getcontext(context) == -1) {
-        log_error("No more cider.");
+        log_error("Failed to getcontext. errno = %d", strerror(errno));
         return NULL;
     }
 
