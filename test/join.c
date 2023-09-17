@@ -1,24 +1,13 @@
 #include "../header/cider.h"
 #include "helper.h"
 
-static void func1(size_t argc, void* _argv[]) {
-    log_debug("func1: started");
+static void func(size_t argc, void* _argv[]) {
+    log_debug("func: started. argc = %zd", argc);
 
-    async_sleep(3);
+    async_sleep(argc);
+    record(argc);
 
-    record(101);
-
-    log_debug("func1: returning");
-}
-
-static void func2(size_t argc, void* _argv[]) {
-    log_debug("func2: started");
-
-    async_sleep(1);
-
-    record(100);
-
-    log_debug("func2: returning");
+    log_debug("func: returning. argc = %zd", argc);
 }
 
 int main(int argc, char* argv[]) {
@@ -26,14 +15,15 @@ int main(int argc, char* argv[]) {
 
     cider_init();
 
-    // func2 のほうが sleep 時間が短いので先に実行完了する.
+    // sleep 時間の短い順に実行完了する
     Cider* const fs[] = {
-        async(func1, 0, NULL),
-        async(func2, 0, NULL),
+        async(func, 5, NULL),
+        async(func, 1, NULL),
+        async(func, 3, NULL),
     };
-    join_ciders(fs, 2);
+    join_ciders(fs, 3);
 
-    assert_steps(2, {100, 101});
+    assert_steps(3, {1, 3, 5});
 
     log_info("Succeeded.");
 
