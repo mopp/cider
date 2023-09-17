@@ -1,6 +1,7 @@
+#define _XOPEN_SOURCE 700
+
 #include "../header/cider.h"
 #include "../lib/log.c/src/log.h"
-
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -8,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#define _XOPEN_SOURCE
 #include <ucontext.h>
 
 // TODO: bitmask にして複数検索できるようにする？

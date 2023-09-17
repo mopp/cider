@@ -1,5 +1,5 @@
 CC := clang
-CFLAGS := -DLOG_USE_COLOR
+CFLAGS := --std=c2x -DLOG_USE_COLOR
 
 test_files := $(shell ls test/*.c)
 test_bins := $(basename $(test_files))
