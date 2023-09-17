@@ -110,12 +110,15 @@ void await(Cider* const next) {
         switch (next->state) {
             case POLLING:
             case WAITED: {
-                // next が何らかの理由で停止している.
+                // next が副作用を待っている
                 // その間は別の Cider を実行する
+                // このときの実行対象に next も含むことで Polling を実現する
                 Cider* t = find_cider(RUNNABLE);
-                if (t != NULL) {
-                    switch_cider(WAITED, t);
+                if (t == NULL) {
+                    log_error("No runnable cider but need to poll");
+                    exit(EXIT_FAILURE);
                 }
+                switch_cider(WAITED, t);
 
                 should_wait = true;
                 break;
