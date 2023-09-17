@@ -1,15 +1,11 @@
 #include "../header/cider.h"
-#include "../lib/log.c/src/log.h"
-#include <assert.h>
-#include <stdio.h>
-
-static int test_storage[3] = {0};
+#include "helper.h"
 
 static void func(size_t argc, void* argv[]) {
-    log_debug("func: started. number");
+    log_debug("func: started. argc = %zd", argc);
 
     async_sleep(50);
-    test_storage[argc] = 100 + argc;
+    record(100 + argc);
 
     log_debug("func: returning");
 }
@@ -27,9 +23,7 @@ int main(void) {
     await(c1);
     await(c2);
 
-    assert(test_storage[0] == 100);
-    assert(test_storage[1] == 101);
-    assert(test_storage[2] == 102);
+    assert_steps(3, {100, 101, 102});
 
     log_info("Succeeded.");
 

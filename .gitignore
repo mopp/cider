@@ -54,3 +54,4 @@ dkms.conf
 cider
 test/*
 !test/*.c
+!test/*.h
