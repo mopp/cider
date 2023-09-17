@@ -9,7 +9,7 @@ static int test_storage[3] = {0};
 static void func(size_t argc, void* argv) {
     log_debug("func: started. number");
 
-    async_sleep(1);
+    async_sleep(50);
     test_storage[argc] = 100 + argc;
 
     log_debug("func: returning");

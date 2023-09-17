@@ -146,27 +146,28 @@ void await(Cider* const next) {
     } while (should_wait);
 }
 
-// 指定された秒数待つ
-// 待つ間、別の Fiber を実行する
-void async_sleep(time_t seconds) {
-    log_debug("async_sleep(%zd)", seconds);
+// 指定されたミリ秒待つ
+// 待っているときに runnable な Fiber があれば実行する
+void async_sleep(long msec) {
+    log_debug("async_sleep(%ld)", msec);
     assert(current_cider->state == RUNNING);
 
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    time_t begin = ts.tv_sec;
-    time_t now = begin;
+    long nsec = msec * (1000 * 1000);
+    long begin_nsec = ts.tv_sec * (1000 * 1000 * 1000) + ts.tv_nsec;
+    long now_nsec = begin_nsec;
 
-    while ((now - begin) <= seconds) {
+    while ((now_nsec - begin_nsec) <= nsec) {
         // sleep 中は暇なので他の Cider を実行する
         Cider* next = find_runnable_cider();
         if (next != NULL) {
             switch_cider(POLLING, next);
         }
 
-        clock_gettime(CLOCK_REALTIME, &ts);
-        now = ts.tv_sec;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        now_nsec = ts.tv_sec * (1000 * 1000 * 1000) + ts.tv_nsec;
     }
 }
 

@@ -13,7 +13,7 @@ int cider_init();
 Cider* async(AsyncFuncion const, size_t, void*);
 void await(Cider* const);
 
-void async_sleep(time_t);
+void async_sleep(long);
 void join_ciders(Cider* const* const, size_t);
 
 #endif
