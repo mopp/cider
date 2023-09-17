@@ -133,8 +133,8 @@ void await(Cider* const next) {
 
 // 指定されたミリ秒待つ
 // 待っているときに runnable な Fiber があれば実行する
-void async_sleep(long msec) {
-    log_debug("async_sleep(%ld)", msec);
+void await_sleep(long msec) {
+    log_debug("await_sleep(%ld)", msec);
     assert(current_cider->state == RUNNING);
 
     struct timespec ts;

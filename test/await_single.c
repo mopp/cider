@@ -14,7 +14,7 @@ static void func(size_t argc, void* argv[]) {
     assert(arr[1] == 2);
     assert(arr[2] == 3);
 
-    async_sleep(1);
+    await_sleep(1);
     test_storage[0] = 100;
 
     log_debug("func: returning");

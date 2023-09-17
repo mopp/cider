@@ -9,7 +9,7 @@ static void func1(size_t argc, void* argv[]) {
 
     assert_last_step(100);
 
-    async_sleep(50);
+    await_sleep(50);
 
     record(101);
 
