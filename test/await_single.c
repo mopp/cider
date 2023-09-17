@@ -1,7 +1,6 @@
 #include "../header/cider.h"
 #include "../lib/log.c/src/log.h"
 #include <assert.h>
-#include <stddef.h>
 #include <stdio.h>
 
 static int test_storage[1] = {0};
