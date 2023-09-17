@@ -13,8 +13,8 @@
 #include <ucontext.h>
 
 typedef uint8_t State;
-#define UNUSED (1 << 0)            // async することで USED になる
-#define USED (1 << 1)              // await や join をすると READY になる
+#define FREE (1 << 0)              // async することで ALLOCATED になる
+#define ALLOCATED (1 << 1)         // await や join をすると READY になる
 #define READY (1 << 2)             // switch すると RUNNING になる
 #define RUNNING (1 << 3)           // 一つの Thread で常にただ一つの Cider しかこの状態になれない
 #define POLLING (1 << 4)           // sleep や通信などの副作用の完了を Polling しながら待っている
@@ -57,7 +57,7 @@ static void log_cider(char const*, Cider const* const);
 int cider_init(void) {
     ciders = malloc(sizeof(Cider) * MAX_COUNT);
     for (Cider* f = &ciders[0]; f != &ciders[MAX_COUNT]; f++) {
-        f->state = UNUSED;
+        f->state = FREE;
     }
 
     return 0;
@@ -65,13 +65,13 @@ int cider_init(void) {
 
 // 与えられた AsyncFuncion を実行する Cider を生成する
 Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
-    Cider* const cider = find_cider(UNUSED);
+    Cider* const cider = find_cider(FREE);
     if (cider == NULL) {
         log_error("No more cider.");
         return NULL;
     }
 
-    log_debug("allocate cider: %zd", to_index(cider));
+    log_cider("async:", cider);
 
     Context* context = &cider->context;
     if (getcontext(context) == -1) {
@@ -92,7 +92,7 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
     arg->argc = argc;
     arg->argv = argv;
 
-    cider->state = USED;
+    cider->state = ALLOCATED;
 
     return cider;
 }
@@ -100,9 +100,11 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
 // next が実行完了するまで待つ
 // next が RUNNABLE ではないとき、他の Cider を実行する
 void await(Cider* const next) {
+    log_cider("await:", next);
+
     assert(current_cider != next);
     assert(current_cider->state == RUNNING);
-    assert(next->state == USED || next->state == READY);
+    assert(next->state == ALLOCATED || next->state == READY);
 
     next->state = READY;
     switch_cider(WAITED, next);
@@ -125,7 +127,7 @@ void await(Cider* const next) {
                 should_wait = true;
                 break;
             }
-            case UNUSED:
+            case FREE:
                 should_wait = false;
                 break;
             default:
@@ -134,7 +136,7 @@ void await(Cider* const next) {
         }
     } while (should_wait);
 
-    assert(next->state == UNUSED);
+    assert(next->state == FREE);
 }
 
 // 指定されたミリ秒待つ
@@ -169,7 +171,7 @@ void join_ciders(Cider* const* const ciders, size_t count) {
     assert(current_cider->state == RUNNING);
 
     for (size_t i = 0; i < count; i++) {
-        assert(ciders[i]->state == USED);
+        assert(ciders[i]->state == ALLOCATED);
 
         // 全て READY にして concurrent に実行可能にする
         ciders[i]->state = READY;
@@ -183,7 +185,7 @@ void join_ciders(Cider* const* const ciders, size_t count) {
         }
 
         for (size_t i = 0; i < count; i++) {
-            if (ciders[i]->state != UNUSED) {
+            if (ciders[i]->state != FREE) {
                 continue;
             }
         }
@@ -222,7 +224,7 @@ static void switch_cider(State prev_state, Cider* const next) {
     if (next->state == DONE) {
         memset(&next->context, 0, sizeof(Context));
         free(next->arg);
-        next->state = UNUSED;
+        next->state = FREE;
     }
 }
 
@@ -260,10 +262,10 @@ static size_t to_index(Cider const* const cider) {
 
 static char* to_state_str(State s) {
     switch (s) {
-        case UNUSED:
-            return "UNUSED";
-        case USED:
-            return "USED";
+        case FREE:
+            return "FREE";
+        case ALLOCATED:
+            return "ALLOCATED";
         case READY:
             return "READY";
         case RUNNING:
