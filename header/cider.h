@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 typedef struct cider Cider;
+// typedef void (*AsyncFuncion)(size_t argc, void* argv[]); に直す
 typedef void (*AsyncFuncion)(size_t argc, void* argv);
 
 int cider_init();
