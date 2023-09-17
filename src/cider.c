@@ -12,12 +12,13 @@
 #include <ucontext.h>
 
 typedef uint8_t State;
-#define UNUSED (1 << 0)  // async することで USED になる
-#define USED (1 << 1)    // await や join をすると READY になる
-#define READY (1 << 2)   // switch すると RUNNING になる
-#define RUNNING (1 << 3) // 一つの Thread で常にただ一つの Cider しかこの状態になれない
-#define POLLING (1 << 4) // sleep や通信などの副作用の完了を Polling しながら待っている
-#define WAITED (1 << 5)  // 他の Cider の実行完了を待っている
+#define UNUSED (1 << 0)            // async することで USED になる
+#define USED (1 << 1)              // await や join をすると READY になる
+#define READY (1 << 2)             // switch すると RUNNING になる
+#define RUNNING (1 << 3)           // 一つの Thread で常にただ一つの Cider しかこの状態になれない
+#define POLLING (1 << 4)           // sleep や通信などの副作用の完了を Polling しながら待っている
+#define WAITED (1 << 5)            // 他の Cider の実行完了を待っている
+#define RUNNABLE (READY | POLLING) // Polling するために POLLING も実行可能なもの扱いする
 
 struct ciderize_arg {
     AsyncFuncion func;
@@ -47,7 +48,6 @@ static Cider* current_cider = &root_cider;
 static void ciderize(void);
 static void switch_cider(State, Cider* const);
 static Cider* find_cider(State);
-static Cider* find_runnable_cider();
 static size_t to_index(Cider const* const);
 
 int cider_init() {
@@ -105,7 +105,7 @@ void await(Cider* const next) {
             case POLLING:
             case WAITED: {
                 // next が何らかの理由で停止しているので、その間は別の Cider を実行する
-                Cider* t = find_runnable_cider();
+                Cider* t = find_cider(RUNNABLE);
                 if (t != NULL) {
                     switch_cider(WAITED, t);
                 }
@@ -138,7 +138,7 @@ void async_sleep(long msec) {
 
     while ((now_nsec - begin_nsec) <= nsec) {
         // sleep 中は暇なので他の Cider を実行する
-        Cider* next = find_runnable_cider();
+        Cider* next = find_cider(RUNNABLE);
         if (next != NULL) {
             switch_cider(POLLING, next);
         }
@@ -224,10 +224,6 @@ static Cider* find_cider(State s) {
     }
 
     return NULL;
-}
-
-static Cider* find_runnable_cider() {
-    return find_cider(READY | POLLING);
 }
 
 static size_t to_index(Cider const* const cider) {
