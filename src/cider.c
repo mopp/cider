@@ -247,7 +247,7 @@ static char* to_state_str(Cider const* const cider) {
         case READY:
             return "READY";
         case RUNNING:
-            return "RUNNABLE";
+            return "RUNNING";
         case POLLING:
             return "POLLING";
         case WAITED:
