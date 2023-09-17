@@ -10,20 +10,79 @@ static void func(size_t argc, void* _argv[]) {
     log_debug("func: returning. argc = %zd", argc);
 }
 
+static void test_join1() {
+    log_info("%s: Begin", __func__);
+
+    join_ciders((Cider* [3]){
+                    async(func, 30, NULL),
+                    async(func, 1, NULL),
+                    async(func, 10, NULL),
+                },
+                3);
+
+    assert_steps(3, {1, 10, 30});
+
+    log_info("%s: Succeeded", __func__);
+}
+
+static void test_join2() {
+    log_info("%s: Begin", __func__);
+
+    join_ciders((Cider* [3]){
+                    async(func, 1, NULL),
+                    async(func, 30, NULL),
+                    async(func, 10, NULL),
+                },
+                3);
+    assert_steps(3, {1, 10, 30});
+
+    log_info("%s: Succeeded", __func__);
+}
+
+static void test_join3() {
+    log_info("%s: Begin", __func__);
+
+    join_ciders((Cider* [3]){
+                    async(func, 1, NULL),
+                    async(func, 10, NULL),
+                    async(func, 30, NULL),
+                },
+                3);
+    assert_steps(3, {1, 10, 30});
+
+    log_info("%s: Succeeded", __func__);
+}
+
+static void test_join4() {
+    log_info("%s: Begin", __func__);
+
+    join_ciders((Cider* [3]){
+                    async(func, 30, NULL),
+                    async(func, 20, NULL),
+                    async(func, 10, NULL),
+                },
+                3);
+    assert_steps(3, {10, 20, 30});
+
+    log_info("%s: Succeeded", __func__);
+}
+
 int main(int argc, char* argv[]) {
     log_info("Begin.");
 
     cider_init();
 
-    // sleep 時間の短い順に実行完了する
-    Cider* const fs[] = {
-        async(func, 5, NULL),
-        async(func, 1, NULL),
-        async(func, 3, NULL),
-    };
-    join_ciders(fs, 3);
+    clear_steps();
+    test_join1();
 
-    assert_steps(3, {1, 3, 5});
+    clear_steps();
+    test_join2();
+
+    clear_steps();
+    test_join3();
+
+    clear_steps();
+    test_join4();
 
     log_info("Succeeded.");
 

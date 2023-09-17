@@ -5,6 +5,7 @@
 #include "../lib/log.c/src/log.h"
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 
 #define MAX_STEPS 128
 static int steps[MAX_STEPS] = {0};
@@ -12,6 +13,11 @@ static size_t step_index = 0;
 
 inline static void record(int n) {
     steps[step_index++] = n;
+}
+
+inline static void clear_steps(void) {
+    step_index = 0;
+    memset(steps, 0, sizeof(int));
 }
 
 static void assert_last_step(int n) {

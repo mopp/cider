@@ -104,7 +104,7 @@ void await(Cider* const next) {
 
     assert(current_cider != next);
     assert(current_cider->state == RUNNING);
-    assert(next->state == ALLOCATED || next->state == READY);
+    assert(next->state == ALLOCATED || next->state == READY || next->state == POLLING);
 
     next->state = READY;
     switch_cider(WAITED, next);
@@ -177,20 +177,10 @@ void join_ciders(Cider* const* const ciders, size_t count) {
         ciders[i]->state = READY;
     }
 
-    while (1) {
-        for (size_t i = 0; i < count; i++) {
-            if (ciders[i]->state & RUNNABLE) {
-                await(ciders[i]);
-            }
+    for (size_t i = 0; i < count; i++) {
+        if (ciders[i]->state & RUNNABLE) {
+            await(ciders[i]);
         }
-
-        for (size_t i = 0; i < count; i++) {
-            if (ciders[i]->state != FREE) {
-                continue;
-            }
-        }
-
-        break;
     }
 
     assert(current_cider->state == RUNNING);
@@ -246,11 +236,23 @@ static void ciderize(void) {
 }
 
 static Cider* find_cider(State s) {
-    for (Cider* next = &ciders[0]; next != &ciders[MAX_COUNT]; ++next) {
+    // First-fit にすると Polling 時に同じ Cider ばかり実行されてしまうので Next-fit にする
+    static Cider* next = NULL;
+
+    if (next == NULL) {
+        next = &ciders[0];
+    }
+
+    Cider* const begin = next;
+    do {
         if (current_cider != next && ((next->state & s) != 0)) {
             return next;
         }
-    }
+
+        if (++next == &ciders[MAX_COUNT]) {
+            next = &ciders[0];
+        }
+    } while (begin != next);
 
     return NULL;
 }
