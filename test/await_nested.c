@@ -11,7 +11,7 @@ static void func1(size_t argc, void* argv[]) {
 
     await_sleep(50);
 
-    record(101);
+    record_step(101);
 
     log_debug("func1: returning");
 }
@@ -19,13 +19,13 @@ static void func1(size_t argc, void* argv[]) {
 static void func2(size_t argc, void* argv[]) {
     log_debug("func2: started.");
 
-    record(100);
+    record_step(100);
 
     Cider* const c = async(func1, 0, NULL);
     await(c);
 
     assert_last_step(101);
-    record(102);
+    record_step(102);
 
     log_debug("func2: returning");
 }

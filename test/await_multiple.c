@@ -5,7 +5,7 @@ static void func(size_t argc, void* argv[]) {
     log_debug("func: started. argc = %zd", argc);
 
     await_sleep(50);
-    record(100 + argc);
+    record_step(100 + argc);
 
     log_debug("func: returning");
 }

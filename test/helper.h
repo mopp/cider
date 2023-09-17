@@ -11,7 +11,7 @@
 static int steps[MAX_STEPS] = {0};
 static size_t step_index = 0;
 
-inline static void record(int n) {
+inline static void record_step(int n) {
     steps[step_index++] = n;
 }
 
