@@ -19,6 +19,7 @@ typedef uint8_t State;
 #define RUNNING (1 << 3)           // 一つの Thread で常にただ一つの Cider しかこの状態になれない
 #define POLLING (1 << 4)           // sleep や通信などの副作用の完了を Polling しながら待っている
 #define WAITED (1 << 5)            // 他の Cider の実行完了を待っている
+#define DONE (1 << 6)              // 実行完了した Cider でリソースの開放待ち
 #define RUNNABLE (READY | POLLING) // Polling するために POLLING も実行可能なもの扱いする
 
 struct ciderize_arg {
@@ -218,9 +219,10 @@ static void switch_cider(State prev_state, Cider* const next) {
     next->context.uc_link = next_context;
 
     // 実行完了していたら Cider を破棄
-    if (next->state == UNUSED) {
+    if (next->state == DONE) {
         memset(&next->context, 0, sizeof(Context));
         free(next->arg);
+        next->state = UNUSED;
     }
 }
 
@@ -234,7 +236,7 @@ static void ciderize(void) {
     arg->func(arg->argc, arg->argv);
 
     // 完了した Cider を破棄する.
-    cider->state = UNUSED;
+    cider->state = DONE;
     // NOTE: ここでメモリを破棄するともとの Context に復帰できなくなる
 }
 
@@ -270,8 +272,10 @@ static char* to_state_str(State s) {
             return "POLLING";
         case WAITED:
             return "WAITED";
+        case DONE:
+            return "DONE";
         default:
-            log_error("unexpected state.");
+            log_error("unexpected state. 0b%b", s);
             exit(EXIT_FAILURE);
     }
 }
