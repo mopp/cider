@@ -49,6 +49,7 @@ static void ciderize(void);
 static void switch_cider(State, Cider* const);
 static Cider* find_cider(State);
 static size_t to_index(Cider const* const);
+static char* to_state_str(Cider const* const);
 
 int cider_init() {
     ciders = malloc(sizeof(Cider) * MAX_COUNT);
@@ -150,9 +151,11 @@ void async_sleep(long msec) {
 }
 
 void join_ciders(Cider* const* const ciders, size_t count) {
+    log_debug("join_ciders(count = %zd)", count);
+
     assert(current_cider->state == RUNNING);
     for (size_t i = 0; i < count; i++) {
-        assert(ciders[i]->state == READY);
+        assert(ciders[i]->state == USED);
     }
 
     while (1) {
@@ -233,4 +236,24 @@ static size_t to_index(Cider const* const cider) {
     }
 
     return ((uintptr_t)cider - (uintptr_t)&ciders[0]) / sizeof(Cider);
+}
+
+static char* to_state_str(Cider const* const cider) {
+    switch (cider->state) {
+        case UNUSED:
+            return "UNUSED";
+        case USED:
+            return "USED";
+        case READY:
+            return "READY";
+        case RUNNING:
+            return "RUNNABLE";
+        case POLLING:
+            return "POLLING";
+        case WAITED:
+            return "WAITED";
+        default:
+            log_error("unexpected state.");
+            exit(EXIT_FAILURE);
+    }
 }

@@ -2,11 +2,11 @@
 #include "../lib/log.c/src/log.h"
 #include <stdio.h>
 
-static int test_codes[10] = {0};
+static int test_codes[2] = {0};
 
 static void func1(size_t argc, void* _argv[]) {
     log_debug("func1: started");
-    async_sleep(1);
+    async_sleep(50);
 
     test_codes[0] = 1;
 
@@ -15,7 +15,7 @@ static void func1(size_t argc, void* _argv[]) {
 
 static void func2(size_t argc, void* _argv[]) {
     log_debug("func2: started");
-    async_sleep(2);
+    async_sleep(50);
 
     test_codes[1] = 2;
 
