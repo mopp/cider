@@ -104,8 +104,8 @@ void await(Cider* const next) {
     log_cider("await:", next);
 
     assert(current_cider != next);
-    assert(current_cider->state & RUNNING);
-    assert(next->state & ALLOCATED); // 多重に await はできない
+    assert(current_cider->state == RUNNING);
+    assert(next->state == ALLOCATED); // 多重に await はできない
 
     next->state = READY;
     do {
@@ -182,7 +182,7 @@ void join_cider_array(Cider* const* const ciders, size_t count) {
 
     assert(current_cider->state == RUNNING);
     for (size_t i = 0; i < count; i++) {
-        assert(ciders[i]->state & FREE);
+        assert(ciders[i]->state == FREE);
     }
 }
 
@@ -193,7 +193,7 @@ static void switch_cider(State prev_state, Cider* const next) {
     // log_cider("before switch: next", next);
 
     assert(current_cider != next);
-    assert(current_cider->state & RUNNING);
+    assert(current_cider->state == RUNNING);
     assert(next->state & (READY | POLLING | WAITED));
 
     Cider* prev = current_cider;
