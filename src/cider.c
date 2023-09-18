@@ -50,6 +50,7 @@ static Cider* current_cider = &root_cider;
 static void ciderize(void);
 static void switch_cider(State, Cider* const);
 static Cider* find_cider(State);
+static void drop_cider(Cider* const);
 static size_t to_index(Cider const* const);
 static char* to_state_str(State);
 static void log_cider(char const*, Cider const* const);
@@ -160,7 +161,7 @@ void join_cider_array(Cider* const* const ciders, size_t count) {
     bool should_wait = true;
     do {
         for (size_t i = 0; i < count; i++) {
-            if ((ciders[i]->state & (FREE | DONE)) == 0) {
+            if ((ciders[i]->state & (FREE)) == 0) {
                 switch_cider(WAITED, ciders[i]);
             }
         }
@@ -181,13 +182,21 @@ void join_cider_array(Cider* const* const ciders, size_t count) {
 
 // current_cider から next に実行を切り替える
 static void switch_cider(State prev_state, Cider* const next) {
-    assert(current_cider != next);
-    assert(current_cider->state & RUNNING);
-    assert(next->state & (READY | POLLING | WAITED));
     // log_debug("before switch: addr(%p)", &prev_state);
     // log_cider("before switch: current", current_cider);
     // log_cider("before switch: next", next);
     // log_debug("before switch: context = %p", &current_cider->context);
+
+    assert(current_cider != next);
+    assert(current_cider->state & RUNNING);
+    assert(next->state & (READY | POLLING | WAITED | DONE));
+
+    if (next->state == DONE) {
+        // join や await で switch は繰り返し呼び出される
+        // DONE なものが来れば drop する
+        drop_cider(next);
+        return;
+    }
 
     Cider* prev = current_cider;
     prev->state = prev_state;
@@ -209,15 +218,19 @@ static void switch_cider(State prev_state, Cider* const next) {
 
     current_cider->state = RUNNING;
 
-    // 実行完了していたら Cider を破棄
-    if (next->state == DONE) {
-        log_cider("Drop cider:", next);
-        memset(&next->context, 0, sizeof(Context));
-        free(next->arg);
-        next->state = FREE;
-    }
+    assert(next->state & (FREE | WAITED | POLLING | DONE));
+}
 
-    assert(next->state & (FREE | WAITED | POLLING));
+static void drop_cider(Cider* const cider) {
+    log_cider("Drop cider:", cider);
+
+    assert(cider->state & DONE);
+
+    memset(&cider->context, 0, sizeof(Context));
+    free(cider->arg);
+    cider->state = FREE;
+
+    return;
 }
 
 // Context の実行開始直後と終了直前に処理を挟むためのラッパー
