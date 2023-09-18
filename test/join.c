@@ -13,12 +13,10 @@ static void func(size_t argc, void* _argv[]) {
 static void test_join1() {
     log_info("%s: Begin", __func__);
 
-    join_ciders((Cider* [3]){
-                    async(func, 30, NULL),
-                    async(func, 1, NULL),
-                    async(func, 10, NULL),
-                },
-                3);
+    join_ciders(
+        async(func, 30, NULL),
+        async(func, 1, NULL),
+        async(func, 10, NULL));
 
     assert_steps(1, 10, 30);
 
@@ -28,12 +26,10 @@ static void test_join1() {
 static void test_join2() {
     log_info("%s: Begin", __func__);
 
-    join_ciders((Cider* [3]){
-                    async(func, 1, NULL),
-                    async(func, 30, NULL),
-                    async(func, 10, NULL),
-                },
-                3);
+    join_ciders(
+        async(func, 1, NULL),
+        async(func, 30, NULL),
+        async(func, 10, NULL));
     assert_steps(1, 10, 30);
 
     log_info("%s: Succeeded", __func__);
@@ -42,12 +38,10 @@ static void test_join2() {
 static void test_join3() {
     log_info("%s: Begin", __func__);
 
-    join_ciders((Cider* [3]){
-                    async(func, 1, NULL),
-                    async(func, 10, NULL),
-                    async(func, 30, NULL),
-                },
-                3);
+    join_ciders(
+        async(func, 1, NULL),
+        async(func, 10, NULL),
+        async(func, 30, NULL));
     assert_steps(1, 10, 30);
 
     log_info("%s: Succeeded", __func__);
@@ -56,12 +50,10 @@ static void test_join3() {
 static void test_join4() {
     log_info("%s: Begin", __func__);
 
-    join_ciders((Cider* [3]){
-                    async(func, 30, NULL),
-                    async(func, 20, NULL),
-                    async(func, 10, NULL),
-                },
-                3);
+    join_ciders(
+        async(func, 30, NULL),
+        async(func, 20, NULL),
+        async(func, 10, NULL));
     assert_steps(10, 20, 30);
 
     log_info("%s: Succeeded", __func__);

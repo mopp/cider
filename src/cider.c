@@ -146,7 +146,7 @@ void await_sleep(long msec) {
 // NOTE: コンテキストスイッチの制御が人類には早すぎる
 // 現状のように await_sleep で制御を他に移すよりも
 // join を起点に深さ優先探索のように実行を切り替えていくほうが保守性が高いかもしれない
-void join_ciders(Cider* const* const ciders, size_t count) {
+void join_cider_array(Cider* const* const ciders, size_t count) {
     log_debug("join_ciders(count = %zd)", count);
     assert(current_cider->state == RUNNING);
 

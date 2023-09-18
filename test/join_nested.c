@@ -13,10 +13,7 @@ static void func(size_t argc, void* _argv[]) {
 static void inner1(size_t _argc, void* _argv[]) {
     log_debug("inner1: started.");
 
-    join_ciders((Cider*[]){
-                    async(func, 3, NULL),
-                },
-                1);
+    join_ciders(async(func, 3, NULL));
     record_step(200);
 
     log_debug("inner1: returning.");
@@ -37,11 +34,9 @@ int main(int argc, char* argv[]) {
     cider_init();
 
     // sleep 時間の短い順に実行完了する
-    join_ciders((Cider*[]){
-                    async(inner1, 0, NULL),
-                    async(inner2, 0, NULL),
-                },
-                2);
+    join_ciders(
+        async(inner1, 0, NULL),
+        async(inner2, 0, NULL));
     assert_steps(100, 3, 200);
 
     log_info("Succeeded.");
