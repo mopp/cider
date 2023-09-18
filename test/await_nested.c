@@ -38,7 +38,7 @@ int main(void) {
     Cider* const c = async(func2, 0, NULL);
     await(c);
 
-    assert_steps(3, {100, 101, 102});
+    assert_steps(100, 101, 102);
 
     log_info("Succeeded.");
 

@@ -20,7 +20,7 @@ static void test_join1() {
                 },
                 3);
 
-    assert_steps(3, {1, 10, 30});
+    assert_steps(1, 10, 30);
 
     log_info("%s: Succeeded", __func__);
 }
@@ -34,7 +34,7 @@ static void test_join2() {
                     async(func, 10, NULL),
                 },
                 3);
-    assert_steps(3, {1, 10, 30});
+    assert_steps(1, 10, 30);
 
     log_info("%s: Succeeded", __func__);
 }
@@ -48,7 +48,7 @@ static void test_join3() {
                     async(func, 30, NULL),
                 },
                 3);
-    assert_steps(3, {1, 10, 30});
+    assert_steps(1, 10, 30);
 
     log_info("%s: Succeeded", __func__);
 }
@@ -62,7 +62,7 @@ static void test_join4() {
                     async(func, 10, NULL),
                 },
                 3);
-    assert_steps(3, {10, 20, 30});
+    assert_steps(10, 20, 30);
 
     log_info("%s: Succeeded", __func__);
 }

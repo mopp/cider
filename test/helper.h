@@ -43,6 +43,10 @@ static void _assert_steps(int expected[], size_t count) {
     }
 }
 
-#define assert_steps(n, ...) _assert_steps((int[n])__VA_ARGS__, n)
+#define assert_steps(...)                                        \
+    do {                                                         \
+        int expected[] = {__VA_ARGS__};                          \
+        _assert_steps(expected, sizeof(expected) / sizeof(int)); \
+    } while (0)
 
 #endif

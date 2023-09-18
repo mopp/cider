@@ -23,7 +23,7 @@ int main(void) {
     await(c1);
     await(c2);
 
-    assert_steps(3, {100, 101, 102});
+    assert_steps(100, 101, 102);
 
     log_info("Succeeded.");
 

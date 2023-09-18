@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
                     async(inner2, 0, NULL),
                 },
                 2);
-    assert_steps(8, {5, 10, 15, 20, 30, 100, 35, 200});
+    assert_steps(5, 10, 15, 20, 30, 100, 35, 200);
 
     log_info("Succeeded.");
 
