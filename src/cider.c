@@ -98,45 +98,20 @@ Cider* async(AsyncFuncion const func, size_t argc, void* argv) {
 }
 
 // next が実行完了するまで待つ
-// next が RUNNABLE ではないとき、他の Cider を実行する
+// 実行完了した Cider は破棄される
 void await(Cider* const next) {
     log_cider("await:", next);
 
     assert(current_cider != next);
-    assert(current_cider->state == RUNNING);
-    assert(next->state == ALLOCATED || next->state == READY || next->state == POLLING);
+    assert(current_cider->state & RUNNING);
+    assert(next->state & (ALLOCATED | RUNNABLE));
 
     next->state = READY;
-    switch_cider(WAITED, next);
-
-    bool should_wait = true;
     do {
-        switch (next->state) {
-            case POLLING:
-            case WAITED: {
-                // next が副作用を待っている
-                // その間は別の Cider を実行する
-                // このときの実行対象に next も含むことで Polling を実現する
-                Cider* t = find_cider(RUNNABLE);
-                if (t == NULL) {
-                    log_error("No runnable cider but need to poll");
-                    exit(EXIT_FAILURE);
-                }
-                switch_cider(WAITED, t);
+        switch_cider(WAITED, next);
+    } while (next->state != FREE);
 
-                should_wait = true;
-                break;
-            }
-            case FREE:
-                should_wait = false;
-                break;
-            default:
-                log_error("Unexpected state in await. state = %d", next->state);
-                exit(EXIT_FAILURE);
-        }
-    } while (should_wait);
-
-    assert(next->state == FREE);
+    assert(next->state & FREE);
 }
 
 // 指定されたミリ秒待つ
@@ -162,12 +137,17 @@ void await_sleep(long msec) {
         clock_gettime(CLOCK_MONOTONIC, &ts);
         now_nsec = ts.tv_sec * (1000 * 1000 * 1000) + ts.tv_nsec;
     }
+
+    log_cider("await_sleep DONE: current =", current_cider);
 }
 
 // 指定された N 個の Cider を concurrent に実行し、全て完了するのを待つ
+//
+// NOTE: コンテキストスイッチの制御が人類には早すぎる
+// 現状のように await_sleep で制御を他に移すよりも
+// join を起点に深さ優先探索のように実行を切り替えていくほうが保守性が高いかもしれない
 void join_ciders(Cider* const* const ciders, size_t count) {
     log_debug("join_ciders(count = %zd)", count);
-
     assert(current_cider->state == RUNNING);
 
     for (size_t i = 0; i < count; i++) {
@@ -177,30 +157,42 @@ void join_ciders(Cider* const* const ciders, size_t count) {
         ciders[i]->state = READY;
     }
 
-    for (size_t i = 0; i < count; i++) {
-        if (ciders[i]->state & RUNNABLE) {
-            await(ciders[i]);
+    bool should_wait = true;
+    do {
+        for (size_t i = 0; i < count; i++) {
+            if ((ciders[i]->state & (FREE | DONE)) == 0) {
+                switch_cider(WAITED, ciders[i]);
+            }
         }
-    }
+
+        should_wait = false;
+        for (size_t i = 0; i < count; i++) {
+            if ((ciders[i]->state & FREE) == 0) {
+                should_wait = true;
+            }
+        }
+    } while (should_wait);
 
     assert(current_cider->state == RUNNING);
     for (size_t i = 0; i < count; i++) {
-        assert(ciders[i]->state == FREE);
+        assert(ciders[i]->state & FREE);
     }
 }
 
 // current_cider から next に実行を切り替える
 static void switch_cider(State prev_state, Cider* const next) {
     assert(current_cider != next);
-    assert(current_cider->state == RUNNING);
-    assert(next->state == READY || next->state == POLLING);
+    assert(current_cider->state & RUNNING);
+    assert(next->state & (READY | POLLING | WAITED));
+    // log_debug("before switch: addr(%p)", &prev_state);
+    // log_cider("before switch: current", current_cider);
+    // log_cider("before switch: next", next);
+    // log_debug("before switch: context = %p", &current_cider->context);
 
     Cider* prev = current_cider;
     prev->state = prev_state;
 
-    Context* next_context = next->context.uc_link;
     next->state = RUNNING;
-    next->context.uc_link = &prev->context; // next の実行完了後にここに戻ってくるために設定する
 
     current_cider = next;
     int err = swapcontext(&prev->context, &next->context);
@@ -210,15 +202,22 @@ static void switch_cider(State prev_state, Cider* const next) {
     }
     current_cider = prev;
 
+    // log_debug("after switch: addr(%p)", &prev_state);
+    // log_cider("after switch: current", current_cider);
+    // log_cider("after switch: next:", next);
+    // log_debug("after switch: context = %p", next->context.uc_link);
+
     current_cider->state = RUNNING;
-    next->context.uc_link = next_context;
 
     // 実行完了していたら Cider を破棄
     if (next->state == DONE) {
+        log_cider("Drop cider:", next);
         memset(&next->context, 0, sizeof(Context));
         free(next->arg);
         next->state = FREE;
     }
+
+    assert(next->state & (FREE | WAITED | POLLING));
 }
 
 // Context の実行開始直後と終了直前に処理を挟むためのラッパー
@@ -229,10 +228,9 @@ static void ciderize(void) {
     CiderizeArg const* const arg = cider->arg;
 
     arg->func(arg->argc, arg->argv);
+    assert(current_cider->state == RUNNING);
 
-    // 完了した Cider を破棄する.
     cider->state = DONE;
-    // NOTE: ここでメモリを破棄するともとの Context に復帰できなくなる
 }
 
 static Cider* find_cider(State s) {
