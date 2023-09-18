@@ -105,14 +105,12 @@ void await(Cider* const next) {
 
     assert(current_cider != next);
     assert(current_cider->state & RUNNING);
-    assert(next->state & (ALLOCATED | RUNNABLE));
+    assert(next->state & ALLOCATED); // 多重に await はできない
 
     next->state = READY;
     do {
         switch_cider(WAITED, next);
     } while (next->state != FREE);
-
-    assert(next->state & FREE);
 }
 
 // 指定されたミリ秒待つ
@@ -161,8 +159,16 @@ void join_cider_array(Cider* const* const ciders, size_t count) {
     bool should_wait = true;
     do {
         for (size_t i = 0; i < count; i++) {
-            if ((ciders[i]->state & (FREE)) == 0) {
-                switch_cider(WAITED, ciders[i]);
+            Cider* c = ciders[i];
+            if (c->state == DONE) {
+                // 他の Cider 経由で実行完了したケース
+                // join した Cider は複数の Cider の親になる
+                // ここでこの Cider の実行コンテキストが上書きされてしまうので
+                // どちらの Cider から join の処理に戻ってきたのか判別ができない
+                // リークしかねないので根本的に実装を変えたほうがよさそう
+                drop_cider(c);
+            } else if ((c->state & FREE) == 0) {
+                switch_cider(WAITED, c);
             }
         }
 
@@ -181,48 +187,40 @@ void join_cider_array(Cider* const* const ciders, size_t count) {
 }
 
 // current_cider から next に実行を切り替える
+// current_cider は prev_state の状態に遷移する
 static void switch_cider(State prev_state, Cider* const next) {
-    // log_debug("before switch: addr(%p)", &prev_state);
     // log_cider("before switch: current", current_cider);
     // log_cider("before switch: next", next);
-    // log_debug("before switch: context = %p", &current_cider->context);
 
     assert(current_cider != next);
     assert(current_cider->state & RUNNING);
-    assert(next->state & (READY | POLLING | WAITED | DONE));
-
-    if (next->state == DONE) {
-        // join や await で switch は繰り返し呼び出される
-        // DONE なものが来れば drop する
-        drop_cider(next);
-        return;
-    }
+    assert(next->state & (READY | POLLING | WAITED));
 
     Cider* prev = current_cider;
     prev->state = prev_state;
 
-    next->state = RUNNING;
-
     current_cider = next;
+    current_cider->state = RUNNING;
     int err = swapcontext(&prev->context, &next->context);
     if (err != 0) {
         log_error("Failed to swapcontext. err = %d", err);
         exit(EXIT_FAILURE);
     }
     current_cider = prev;
-
-    // log_debug("after switch: addr(%p)", &prev_state);
-    // log_cider("after switch: current", current_cider);
-    // log_cider("after switch: next:", next);
-    // log_debug("after switch: context = %p", next->context.uc_link);
-
     current_cider->state = RUNNING;
 
-    assert(next->state & (FREE | WAITED | POLLING | DONE));
+    // log_cider("after switch: current", current_cider);
+    // log_cider("after switch: next:", next);
+
+    if (next->state == DONE) {
+        drop_cider(next);
+    }
+
+    assert(next->state & (FREE | POLLING | WAITED));
 }
 
 static void drop_cider(Cider* const cider) {
-    log_cider("Drop cider:", cider);
+    log_cider("drop:", cider);
 
     assert(cider->state & DONE);
 
