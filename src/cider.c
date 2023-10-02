@@ -37,7 +37,7 @@ struct cider {
     CiderizeArg* arg;
 };
 
-static size_t const STACK_SIZE = 8 * 1024; // 8KiB
+static size_t const STACK_SIZE = 64 * 1024; // 8KiB
 static size_t const MAX_COUNT = 64;
 static Cider* ciders;
 static Cider root_cider = {
