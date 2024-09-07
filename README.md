@@ -63,4 +63,5 @@ NOTE: It don't aware of the change of headers.
 
 - Add more tests
 - Improve readability
+- Add Fiber local storage
 - Introduce N Threads M Fibers model
